@@ -515,7 +515,7 @@ class RequestPythonREPL(ss.StreamRequestHandler):
                     payload = self.decode_frame(
                         bytearray(self.request.recv(1024).strip()))
                     decoded_payload = payload.decode('utf-8')
-                    print "R: = " + decoded_payload
+                    print( "R: = " + decoded_payload)
                     k = bytes(decoded_payload)
                     x = k.replace("\n", "\r") #replace 0A (\n) by 0D (\r)
                     y = ByteToHex(x)
@@ -616,8 +616,7 @@ class RequestPythonREPL(ss.StreamRequestHandler):
         # adding payload
         frame_to_send = bytearray(frame) + payload
 
-        self.request.sendall(frame_to_send)
-
+        self.request.sendall(frame_to_send
 
 class ThreadedTCPServer(ss.ThreadingMixIn, ss.TCPServer):
     # from https://stackoverflow.com/a/18858817
