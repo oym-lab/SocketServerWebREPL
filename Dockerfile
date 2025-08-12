@@ -2,6 +2,6 @@ FROM python:3.8-slim
 
 WORKDIR /app
 
-COPY socketserverwebrepl.py .
+COPY socketserverWebREPL.py .
 
-CMD ["python", "socketserverwebrepl.py"]
+CMD ["python", "socketserverWebREPL.py"]
