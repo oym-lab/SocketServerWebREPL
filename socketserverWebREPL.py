@@ -625,61 +625,33 @@ class ThreadedTCPServer(ss.ThreadingMixIn, ss.TCPServer):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(self.server_address)
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Expose a Python REPL loop"
-                                     " over a tcp socket.")
-    parser.add_argument('-i', '--hostname', default=None,
-                        help="Ip to bind to defaults to 0.0.0.0, will use "
-                             "environment value of REPL_HOST if set.")
-    parser.add_argument('-p', '--port', default=None, type=int,
-                        help="Port to bind to. Defaults"
-                        " to 8266, will use environment value of REPL_PORT if"
-                        " set.")
-    parser.add_argument('-k', '--kill-active', default=False,
-                        action="store_true", help="Kill active connections on"
-                        " interrupt signal.")
+    port = int(os.environ.get('PORT', 8080))
+    hostname = '0.0.0.0'
 
-    args = parser.parse_args()
+    # ヘルスチェック用のHTTPサーバー
+    class HealthCheckHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'OK')
 
-    if ("REPL_HOST" in os.environ) and args.hostname is None:
-        args.hostname = os.environ["REPL_HOST"]
+    http_server = HTTPServer((hostname, port), HealthCheckHandler)
+    http_thread = threading.Thread(target=http_server.serve_forever)
+    http_thread.daemon = True
+    http_thread.start()
 
-    if args.hostname is None:  # still None, go for fallback.
-        args.hostname = "0.0.0.0"
+    # WebSocketサーバー
+    ws_server = ThreadedTCPServer((hostname, port), RequestPythonREPL)
+    ws_thread = threading.Thread(target=ws_server.serve_forever)
+    ws_thread.daemon = True
+    ws_thread.start()
 
-    if "REPL_PORT" in os.environ and args.port is None:
-        args.port = int(os.environ["REPL_PORT"])
-
-    if (args.port is None):  # Still None, go for fallback.
-        args.port = 8266
-
-    # Create the server object and a thread to serve.
-    server = ThreadedTCPServer((args.hostname, args.port), RequestPythonREPL)
-
-    # set whether sending ctrl+c to the server will close it even if there are active connections.
-    server.daemon_threads = args.kill_active
-
-    # start the server thread
-    server_thread = threading.Thread(target=server.serve_forever)
-
-    # Exit the server thread when the main thread terminates
-    server_thread.daemon = True
-
-    # Start the server thread, which serves the RequestPythonREPL.
-    server_thread.start()
-
-    print("BIPES Project - Bridge started")
-    print("Now, access the Python Console from a Web Browser using a WebREPL client")
-    print("For example: https://micropython.org/webrepl/#127.0.0.1:8266/")
-
-    # Ensure main thread does not quit unless we want it to.
-    while not should_exit:
-        time.sleep(1)
-
-    # If we reach this point we are really shutting down the server.
-    print("Shutting down.")
-    server.server_close()
-    server.shutdown()
-    server_thread.join()
-    # This does not always correctly release the socket, hence SO_REUSEADDR.
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        http_server.shutdown()
+        ws_server.shutdown()
+        sys.exit(0)
