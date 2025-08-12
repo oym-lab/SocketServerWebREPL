@@ -27,6 +27,12 @@ import os
 import sys
 # import readline # optional, will allow Up/Down/History in the console
 
+
+
+import socketserver
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+
 # For Python WebREPL
 import hashlib
 import base64
