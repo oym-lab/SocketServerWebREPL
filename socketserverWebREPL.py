@@ -624,6 +624,7 @@ class ThreadedTCPServer(ss.ThreadingMixIn, ss.TCPServer):
     def server_bind(self):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(self.server_address)
+        sys.exit(0)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 8080))
@@ -642,8 +643,9 @@ if __name__ == "__main__":
     http_thread.daemon = True
     http_thread.start()
 
-    # WebSocketサーバー
-    ws_server = ThreadedTCPServer((hostname, port), RequestPythonREPL)
+    # WebSocketサーバーは別のポートで起動
+    websocket_port = 8266  # 例: デフォルトのポート8266
+    ws_server = ThreadedTCPServer((hostname, websocket_port), RequestPythonREPL)
     ws_thread = threading.Thread(target=ws_server.serve_forever)
     ws_thread.daemon = True
     ws_thread.start()
@@ -655,3 +657,4 @@ if __name__ == "__main__":
         http_server.shutdown()
         ws_server.shutdown()
         sys.exit(0)
+
